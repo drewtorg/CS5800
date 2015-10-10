@@ -121,6 +121,22 @@ ORDER BY r1.nameLast;
 --  that has hit the most home runs in a single season. Order by the year. 
 -- Note that the 'batting' table has a column 'HR' with the number of home 
 -- runs hit by a player in that year.
+SELECT master.nameFirst, master.nameLast, yearID, MAX(batting.HR) HomeRuns
+FROM master
+	NATURAL JOIN batting
+GROUP BY yearID
+ORDER BY yearID;
+CREATE OR REPLACE VIEW batters AS (
+	SELECT nameFirst, nameLast, HR
+    FROM master
+		NATURAL JOIN batting
+);
+
+SELECT a.*
+FROM batters a
+	JOIN batters b 
+    ON a.nameFirst = b.nameFirst AND a.nameLast = b.nameLast AND a.HR >= b.HR
+GROUP BY a.nameFirst, a.nameLast, a.HR;
 
 -- Query 9 - Third best home runs each year - List the first name, last name,
 -- year, and number of HRs of every player that has hit the third most home 
@@ -136,6 +152,25 @@ ORDER BY r1.nameLast;
 -- over its entire history. Consider a "team" to be a team with the same name, 
 -- so if the team changes name, it is consider two different teams. 
 -- Show the team name, win percentage, and the rank.
+CREATE OR REPLACE VIEW nl AS (
+	SELECT teams.name, SUM(teams.W) wins, SUM(teams.L) losses, SUM(teams.W)/(SUM(teams.W) + SUM(teams.L)) winRate
+	FROM teams
+	WHERE lgID = "NL"
+    GROUP BY name
+    ORDER BY winRate DESC
+);
+    
+SELECT t0.winRate
+FROM nl AS t0
+	LEFT JOIN nl AS t1 
+		ON t0.name=t1.name AND t1.winRate>t0.winRate
+WHERE t1.name IS NULL;
+    
+SELECT a.*, count(*) as rank 
+FROM nl a
+	JOIN nl b 
+    ON a.name = b.name AND a.winRate >= b.winRate
+GROUP BY a.name, a.winRate;
 
 -- Query 12 - Casey Stengel's Pitchers
 -- List the year, first name, and last name of each pitcher who was a on a team
@@ -160,7 +195,7 @@ FROM (SELECT DISTINCT teams.yearId, nameFirst, nameLast, name AS teamName
 				AND manager.teamName = pitchers.teamName;
     
 SELECT *
-FROM teams
+FROM teams;
 
 -- Query 13 - Two degrees from Casey
 -- List the name of each manager, who managed a pitcher that at one time was a 
