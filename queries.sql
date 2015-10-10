@@ -22,15 +22,16 @@ FROM (SELECT DISTINCT m.nameFirst, m.nameLast
 		NATURAL JOIN appearances a
 		NATURAL JOIN teams t
 	WHERE t.name = "Brooklyn Dodgers"
-	) X, 
+	) X
+		INNER JOIN
     (SELECT DISTINCT m.nameFirst, m.nameLast
     FROM master m 
 		NATURAL JOIN appearances a
 		NATURAL JOIN teams t
 	WHERE t.name = "Los Angeles Dodgers"
 	) Y
-WHERE X.nameFirst = Y.nameFirst
-    AND X.nameLast = Y.nameLast
+		ON X.nameFirst = Y.nameFirst
+			AND X.nameLast = Y.nameLast
 ORDER BY X.nameLast;
 
 -- Query 3 - Gold Glove Dodgers
@@ -52,11 +53,11 @@ ORDER BY nameLast, yearId DESC;
 -- of world series that it has won (the column WSWin in the Teams table 
 -- has a 'Y' value if the team won the world series in that season). 
 -- Each winner should be listed just once.
-SELECT teams.name, teams.yearID, COUNT(*) count
+SELECT teams.name, COUNT(*) count
 FROM teams
-	NATURAL JOIN appearances
-WHERE WSWin = 'Y'
-GROUP BY teams.name;
+WHERE teams.WSWin = "Y"
+GROUP BY teams.name
+ORDER BY count;
 
 -- Query 5 - USU batters
 -- List the first name, last name, year played, and batting average (h/ab) 
