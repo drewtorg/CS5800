@@ -76,6 +76,21 @@ ORDER BY yearID;
 -- List the total salary for two consecutive years, team name, and year 
 -- for every team that had a total salary which was 1.5 times as much 
 -- as for the previous year.
+CREATE OR REPLACE VIEW teamsalaries AS (
+	SELECT name, lgID, yearID, SUM(salaries.salary) salary FROM master 
+		NATURAL JOIN salaries
+		NATURAL JOIN teams
+		NATURAL JOIN appearances
+	GROUP BY teams.name, teams.yearID
+);
+SELECT X.name, X.lgID, X.yearID prevYear, X.salary prevSalary, 
+	Y.yearID currYear, Y.salary currSalary, TRUNCATE(Y.salary / X.salary * 100, 0) percentIncrease
+FROM teamsalaries X, teamsalaries Y
+WHERE X.name = Y.name
+	AND TRUNCATE(Y.salary / X.salary * 100, 0) >= 150
+	AND X.yearID = Y.yearID - 1
+ORDER BY prevYear, X.name;
+
 
 -- Query 7 - Red Sox Four
 -- List the first name and last name of every player that has batted for 
