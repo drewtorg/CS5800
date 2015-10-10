@@ -17,17 +17,21 @@ ORDER BY nameLast;
 -- play for any other team). List each player only once. 
 -- 17.7 sec
 SELECT DISTINCT X.nameFirst, X.nameLast
-FROM (SELECT DISTINCT m.nameFirst, m.nameLast, t.name
+FROM (SELECT DISTINCT m.nameFirst, m.nameLast
     FROM master m 
 		NATURAL JOIN appearances a
 		NATURAL JOIN teams t
+	WHERE t.name = "Brooklyn Dodgers"
 	) X, 
-    (SELECT DISTINCT m.nameFirst, m.nameLast, t.name
+    (SELECT DISTINCT m.nameFirst, m.nameLast
     FROM master m 
 		NATURAL JOIN appearances a
 		NATURAL JOIN teams t
+	WHERE t.name = "Los Angeles Dodgers"
 	) Y
-WHERE X.name = "Los Angeles Dodgers" AND Y.name = "Brooklyn Dodgers";
+WHERE X.nameFirst = Y.nameFirst
+    AND X.nameLast = Y.nameLast
+ORDER BY X.nameLast;
 
 -- Query 3 - Gold Glove Dodgers
 -- For each Los Angeles Dodger that has won a "Gold Glove" award, 
