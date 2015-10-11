@@ -15,7 +15,7 @@ ORDER BY nameLast;
 -- List the first name and last name of every player that has played
 -- only for the Los Angeles AND Brooklyn Dodgers (i.e., they did not 
 -- play for any other team). List each player only once. 
--- 17.7 sec
+-- VERIFY RESULTS
 SELECT DISTINCT X.nameFirst, X.nameLast
 FROM (SELECT DISTINCT m.nameFirst, m.nameLast
     FROM master m 
@@ -40,19 +40,20 @@ ORDER BY X.nameLast;
 -- field in the 'awardsplayers' table), and year in which the award 
 -- was won. Note that a player may win such an award several times.
 -- .063 sec
-SELECT master.nameFirst, master.nameLast, awardsplayers.notes, yearId
+SELECT master.nameFirst, master.nameLast, yearId, awardsplayers.notes
 FROM awardsplayers
 	NATURAL JOIN master
 	NATURAL JOIN appearances
     NATURAL JOIN teams
 WHERE awardID = "Gold Glove" AND teams.name = "Los Angeles Dodgers"
-ORDER BY nameLast, yearId DESC;
+ORDER BY yearId, nameLast;
 
 -- Query 4 - World Series Winners
 -- List the name of each team that has won the world series and number 
 -- of world series that it has won (the column WSWin in the Teams table 
 -- has a 'Y' value if the team won the world series in that season). 
 -- Each winner should be listed just once.
+-- .031 sec
 SELECT teams.name, COUNT(*) count
 FROM teams
 WHERE teams.WSWin = "Y"
@@ -76,6 +77,8 @@ ORDER BY yearID;
 -- List the total salary for two consecutive years, team name, and year 
 -- for every team that had a total salary which was 1.5 times as much 
 -- as for the previous year.
+-- VERIFY RESULTS
+-- 1.094 sec
 CREATE OR REPLACE VIEW teamsalaries AS (
 	SELECT name, lgID, yearID, SUM(salaries.salary) salary FROM master 
 		NATURAL JOIN salaries
@@ -96,6 +99,7 @@ ORDER BY prevYear, X.name;
 -- List the first name and last name of every player that has batted for 
 -- the Boston Red Sox in at least four consecutive years. 
 -- List each player only once.
+-- 15.547 sec
 CREATE OR REPLACE VIEW redsox AS (
 	SELECT nameFirst, nameLast, AB, yearId
     FROM master
@@ -121,22 +125,19 @@ ORDER BY r1.nameLast;
 --  that has hit the most home runs in a single season. Order by the year. 
 -- Note that the 'batting' table has a column 'HR' with the number of home 
 -- runs hit by a player in that year.
-SELECT master.nameFirst, master.nameLast, yearID, MAX(batting.HR) HomeRuns
-FROM master
-	NATURAL JOIN batting
-GROUP BY yearID
-ORDER BY yearID;
-CREATE OR REPLACE VIEW batters AS (
-	SELECT nameFirst, nameLast, HR
+-- 1.281 sec
+CREATE OR REPLACE VIEW maxhr AS (
+	SELECT yearID, MAX(batting.HR) homeRuns
     FROM master
 		NATURAL JOIN batting
+	GROUP BY yearID
 );
+SELECT b.yearId, m.nameFirst, m.nameLast, hr.homeRuns
+FROM master m
+	NATURAL JOIN batting b
+	INNER JOIN maxhr hr ON hr.homeRuns = b.HR AND b.yearID = hr.yearID
+ORDER BY b.yearId;
 
-SELECT a.*
-FROM batters a
-	JOIN batters b 
-    ON a.nameFirst = b.nameFirst AND a.nameLast = b.nameLast AND a.HR >= b.HR
-GROUP BY a.nameFirst, a.nameLast, a.HR;
 
 -- Query 9 - Third best home runs each year - List the first name, last name,
 -- year, and number of HRs of every player that has hit the third most home 
@@ -175,16 +176,16 @@ GROUP BY a.name, a.winRate;
 -- Query 12 - Casey Stengel's Pitchers
 -- List the year, first name, and last name of each pitcher who was a on a team
 --  managed by Casey Stengel (pitched in the same season on a team managed by Casey).
-SELECT *
-FROM (SELECT DISTINCT teams.yearId, nameFirst, nameLast, name AS teamName
-		FROM master 
-			NATURAL JOIN appearances
-			INNER JOIN pitching
-				ON appearances.yearId = pitching.yearID
-					AND master.masterID = pitching.masterID
-            INNER JOIN teams ON teams.teamID = appearances.teamID
-		WHERE pitching.G > 0) pitchers
-			INNER JOIN
+-- .406 sec
+CREATE OR REPLACE VIEW pitchers AS (
+SELECT yearId, name AS teamName, nameFirst, nameLast
+FROM master 
+	NATURAL JOIN appearances
+	NATURAL JOIN teams
+WHERE G_p > 0
+);
+SELECT manager.teamName, manager.yearId, pitchers.nameFirst, pitchers.nameLast, manager.nameFirst, manager.nameLast
+FROM pitchers INNER JOIN
     (SELECT yearId, nameFirst, nameLast, name AS teamName
 		FROM master 
 			NATURAL JOIN teams
@@ -193,9 +194,6 @@ FROM (SELECT DISTINCT teams.yearId, nameFirst, nameLast, name AS teamName
 			AND nameLast = "Stengel") manager
             ON pitchers.yearID = manager.yearId
 				AND manager.teamName = pitchers.teamName;
-    
-SELECT *
-FROM teams;
 
 -- Query 13 - Two degrees from Casey
 -- List the name of each manager, who managed a pitcher that at one time was a 
