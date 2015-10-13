@@ -146,10 +146,9 @@ ORDER BY b.yearId;
 SELECT nameFirst, nameLast, yearId, HR
 FROM master
 	NATURAL JOIN batting batters
-WHERE ( 3 ) = (
+WHERE ( 2 ) = (
 	SELECT COUNT( batters2.HR)
-	FROM master
-		NATURAL JOIN batting batters2
+	FROM batting batters2
 	WHERE batters.yearID = batters2.yearID AND batters2.HR > batters.HR
 )
 ORDER BY yearId;
@@ -179,15 +178,17 @@ ORDER BY X.yearId;
 -- so if the team changes name, it is consider two different teams. 
 -- Show the team name, win percentage, and the rank.
 -- .032 sec
-    
-SELECT nl.*, (@rank := @rank + 1) AS rank 
-FROM ( 	SELECT teams.name, SUM(teams.W) wins, SUM(teams.L) losses, SUM(teams.W)/(SUM(teams.W) + SUM(teams.L)) winRate
-		FROM teams, (SELECT @rank := 0) vars
-		WHERE lgID = "NL"
-		GROUP BY name
-		ORDER BY winRate
-        ) nl
-ORDER BY nl.winRate DESC;
+CREATE OR REPLACE VIEW nleague AS (
+	SELECT teams.name, SUM(teams.W) wins, SUM(teams.L) losses, SUM(teams.W)/(SUM(teams.W) + SUM(teams.L)) winRate
+	FROM teams
+	WHERE lgID = "NL"
+	GROUP BY name
+);
+SELECT X.name, X.wins, X.losses, X.winRate, COUNT(*) AS rank
+FROM nleague X, nleague Y
+WHERE X.winRate <= Y.winRate
+GROUP BY X.name
+ORDER BY rank;
 
 -- Query 12 - Casey Stengel's Pitchers
 -- List the year, first name, and last name of each pitcher who was a on a team
@@ -202,11 +203,11 @@ WHERE G_p > 0
 );
 CREATE OR REPLACE VIEW stengel AS (
 SELECT yearId, nameFirst, nameLast, name AS teamName
-		FROM master 
-			NATURAL JOIN teams
-			NATURAL JOIN managers
-		WHERE nameFirst = "Casey"
-			AND nameLast = "Stengel"
+FROM master 
+	NATURAL JOIN teams
+	NATURAL JOIN managers
+WHERE nameFirst = "Casey"
+	AND nameLast = "Stengel"
 );
 SELECT manager.teamName, manager.yearId, pitchers.nameFirst, pitchers.nameLast, manager.nameFirst AS managerNameFirst, manager.nameLast AS managerNameFirst
 FROM pitchers INNER JOIN stengel AS manager ON pitchers.yearID = manager.yearId AND manager.teamName = pitchers.teamName;
@@ -218,6 +219,36 @@ FROM pitchers INNER JOIN stengel AS manager ON pitchers.yearID = manager.yearId 
 -- Yogi Berra. Let player B be related to player A because A played on a
 -- team in the same year with player A. Then player B is two-degrees of
 -- separation from Yogi Berra.
+CREATE OR REPLACE VIEW yogiTeams AS (
+	SELECT yearID, teamID, masterId
+    FROM master 
+		NATURAL JOIN appearances
+	WHERE nameFirst = "Yogi" AND nameLast = "Berra"
+);
+CREATE OR REPLACE VIEW allPlayers AS (
+	SELECT masterId, nameFirst, nameLast, teamID, yearId
+	FROM master
+		NATURAL JOIN appearances
+);
+CREATE OR REPLACE VIEW yogiTeamMembers AS (
+	SELECT allPlayers.masterId
+    FROM yogiTeams
+		INNER JOIN allPlayers ON allPlayers.teamID = yogiTeams.teamID 
+							  AND allPlayers.yearId = yogiTeams.yearID
+	WHERE allPlayers.masterId <> yogiTeams.masterID
+);
+CREATE OR REPLACE VIEW yogiTMTeams AS (
+	SELECT DISTINCT yearID, teamID, master.masterId
+    FROM master 
+		NATURAL JOIN appearances
+        INNER JOIN yogiTeamMembers ON master.masterID = yogiTeamMembers.masterID
+);
+SELECT DISTINCT allPlayers.nameFirst, allPlayers.nameLast
+FROM yogiTMTeams
+	INNER JOIN allPlayers ON allPlayers.teamID = yogiTMTeams.teamID 
+						  AND allPlayers.yearId = yogiTMTeams.yearID
+WHERE allPlayers.masterId <> yogiTMTeams.masterID
+ORDER BY allPlayers.nameLast;
 
 -- Query 14 - Rickey's travels
 -- List all of the teams for which Rickey Henderson did not play. Note that
