@@ -142,36 +142,51 @@ ORDER BY b.yearId;
 -- Query 9 - Third best home runs each year - List the first name, last name,
 -- year, and number of HRs of every player that has hit the third most home 
 -- runs in a single season. Order by the year.
+-- ??? sec times out but im sure it's right
+SELECT nameFirst, nameLast, yearId, HR
+FROM master
+	NATURAL JOIN batting batters
+WHERE ( 3 ) = (
+	SELECT COUNT( batters2.HR)
+	FROM master
+		NATURAL JOIN batting batters2
+	WHERE batters.yearID = batters2.yearID AND batters2.HR > batters.HR
+);
 
 -- Query 10 - Triple happy team mates
 -- List the team name, year, players' names, the number of triples hit 
 -- (column 'T' in the batting table), in which two or more players on the same 
 -- team hit 10 or more triples each.
+-- 410.297 sec
+CREATE OR REPLACE VIEW triples AS (
+	SELECT nameFirst, nameLast, batting.3B as triples, teams.yearId, teams.name
+	FROM master
+		NATURAL JOIN batting
+        INNER JOIN teams on teams.teamID = batting.teamID AND teams.yearID = batting.yearID
+	WHERE batting.3B >= 10
+    ORDER BY teams.name, yearID
+);
+ SELECT X.yearId, X.name AS teamName, X.nameFirst AS firstName, X.nameLast AS lastName, X.triples, Y.nameFirst AS teammateFirstName, Y.nameLast AS teammateLastName, Y.triples AS teammateTriples
+FROM triples X
+	INNER JOIN triples Y ON X.name = Y.name AND X.yearId = Y.yearID 
+WHERE X.nameFirst <> Y.nameFirst AND X.nameLast <> Y.nameLast
+ORDER BY X.yearId;
 
 -- Query 11 - Ranking the teams
 -- Rank each National League (NL) team in terms of the winning percentage (wins divided by losses) 
 -- over its entire history. Consider a "team" to be a team with the same name, 
 -- so if the team changes name, it is consider two different teams. 
 -- Show the team name, win percentage, and the rank.
-CREATE OR REPLACE VIEW nl AS (
-	SELECT teams.name, SUM(teams.W) wins, SUM(teams.L) losses, SUM(teams.W)/(SUM(teams.W) + SUM(teams.L)) winRate
-	FROM teams
-	WHERE lgID = "NL"
-    GROUP BY name
-    ORDER BY winRate DESC
-);
+-- .032 sec
     
-SELECT t0.winRate
-FROM nl AS t0
-	LEFT JOIN nl AS t1 
-		ON t0.name=t1.name AND t1.winRate>t0.winRate
-WHERE t1.name IS NULL;
-    
-SELECT a.*, count(*) as rank 
-FROM nl a
-	JOIN nl b 
-    ON a.name = b.name AND a.winRate >= b.winRate
-GROUP BY a.name, a.winRate;
+SELECT nl.*, (@rank := @rank + 1) AS rank 
+FROM ( 	SELECT teams.name, SUM(teams.W) wins, SUM(teams.L) losses, SUM(teams.W)/(SUM(teams.W) + SUM(teams.L)) winRate
+		FROM teams, (SELECT @rank := 0) vars
+		WHERE lgID = "NL"
+		GROUP BY name
+		ORDER BY winRate
+        ) nl
+ORDER BY nl.winRate DESC;
 
 -- Query 12 - Casey Stengel's Pitchers
 -- List the year, first name, and last name of each pitcher who was a on a team
@@ -184,16 +199,16 @@ FROM master
 	NATURAL JOIN teams
 WHERE G_p > 0
 );
-SELECT manager.teamName, manager.yearId, pitchers.nameFirst, pitchers.nameLast, manager.nameFirst, manager.nameLast
-FROM pitchers INNER JOIN
-    (SELECT yearId, nameFirst, nameLast, name AS teamName
+CREATE OR REPLACE VIEW stengel AS (
+SELECT yearId, nameFirst, nameLast, name AS teamName
 		FROM master 
 			NATURAL JOIN teams
 			NATURAL JOIN managers
 		WHERE nameFirst = "Casey"
-			AND nameLast = "Stengel") manager
-            ON pitchers.yearID = manager.yearId
-				AND manager.teamName = pitchers.teamName;
+			AND nameLast = "Stengel"
+);
+SELECT manager.teamName, manager.yearId, pitchers.nameFirst, pitchers.nameLast, manager.nameFirst AS managerNameFirst, manager.nameLast AS managerNameFirst
+FROM pitchers INNER JOIN stengel AS manager ON pitchers.yearID = manager.yearId AND manager.teamName = pitchers.teamName;
 
 -- Query 13 - Two degrees from Casey
 -- List the name of each manager, who managed a pitcher that at one time was a 
