@@ -218,3 +218,27 @@ FROM pitchers INNER JOIN stengel AS manager ON pitchers.yearID = manager.yearId 
 -- List all of the teams for which Rickey Henderson did not play. Note that
 -- because teams come and go, limit your answer to only the teams that were 
 -- in existence while Rickey Henderson was a player. List each such team once.
+-- .968 sec
+CREATE OR REPLACE VIEW rickeyYears AS (
+	SELECT yearID
+    FROM master NATURAL JOIN appearances
+	WHERE nameFirst = "Rickey" AND nameLast = "Henderson"
+);
+CREATE OR REPLACE VIEW rickeyTeams AS (
+	SELECT DISTINCT name
+    FROM master NATURAL JOIN appearances NATURAL JOIN teams
+	WHERE nameFirst = "Rickey" AND nameLast = "Henderson"
+);
+CREATE OR REPLACE VIEW teamsDuringRickeyYears AS (
+	SELECT DISTINCT name
+    FROM teams
+		NATURAL JOIN appearances
+    WHERE teams.yearID IN (SELECT yearID FROM rickeyYears)
+);
+SELECT name
+FROM teamsDuringRickeyYears teams
+WHERE NOT EXISTS ( 	SELECT name
+					FROM rickeyTeams
+                    WHERE teams.name = rickeyTeams.name
+)
+ORDER BY name;
