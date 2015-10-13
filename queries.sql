@@ -142,7 +142,7 @@ ORDER BY b.yearId;
 -- Query 9 - Third best home runs each year - List the first name, last name,
 -- year, and number of HRs of every player that has hit the third most home 
 -- runs in a single season. Order by the year.
--- ??? sec times out but im sure it's right
+-- ??? sec times out but im sure it's right, but terribly inefficient
 SELECT nameFirst, nameLast, yearId, HR
 FROM master
 	NATURAL JOIN batting batters
@@ -151,7 +151,8 @@ WHERE ( 3 ) = (
 	FROM master
 		NATURAL JOIN batting batters2
 	WHERE batters.yearID = batters2.yearID AND batters2.HR > batters.HR
-);
+)
+ORDER BY yearId;
 
 -- Query 10 - Triple happy team mates
 -- List the team name, year, players' names, the number of triples hit 
@@ -210,9 +211,13 @@ SELECT yearId, nameFirst, nameLast, name AS teamName
 SELECT manager.teamName, manager.yearId, pitchers.nameFirst, pitchers.nameLast, manager.nameFirst AS managerNameFirst, manager.nameLast AS managerNameFirst
 FROM pitchers INNER JOIN stengel AS manager ON pitchers.yearID = manager.yearId AND manager.teamName = pitchers.teamName;
 
--- Query 13 - Two degrees from Casey
--- List the name of each manager, who managed a pitcher that at one time was a 
--- teamate of a pitcher on a team managed by Casey Stengel.
+-- Query 13 - Two degrees from Yogi Berra
+-- List the name of each player who appeared on a team with a player that
+-- was at one time was a teamate of Yogi Berra. So suppose player A was a
+-- teamate of Yogi Berra. Then player A is one-degree of separation from
+-- Yogi Berra. Let player B be related to player A because A played on a
+-- team in the same year with player A. Then player B is two-degrees of
+-- separation from Yogi Berra.
 
 -- Query 14 - Rickey's travels
 -- List all of the teams for which Rickey Henderson did not play. Note that
