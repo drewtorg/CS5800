@@ -1,3 +1,4 @@
+-- Andrew Torgeson
 use baseball;
 -- Query 1 - LA Dodgers
 -- List the first name and last name of every player that has 
@@ -15,24 +16,57 @@ ORDER BY nameLast;
 -- List the first name and last name of every player that has played
 -- only for the Los Angeles AND Brooklyn Dodgers (i.e., they did not 
 -- play for any other team). List each player only once. 
--- VERIFY RESULTS
-SELECT DISTINCT X.nameFirst, X.nameLast
-FROM (SELECT DISTINCT m.nameFirst, m.nameLast
-    FROM master m 
-		NATURAL JOIN appearances a
-		NATURAL JOIN teams t
-	WHERE t.name = "Brooklyn Dodgers"
-	) X
-		INNER JOIN
-    (SELECT DISTINCT m.nameFirst, m.nameLast
-    FROM master m 
-		NATURAL JOIN appearances a
-		NATURAL JOIN teams t
-	WHERE t.name = "Los Angeles Dodgers"
-	) Y
-		ON X.nameFirst = Y.nameFirst
-			AND X.nameLast = Y.nameLast
-ORDER BY X.nameLast;
+-- 38.368 sec
+CREATE OR REPLACE VIEW allPlayers AS (
+	SELECT masterId, nameFirst, nameLast, teamID, yearId, name
+	FROM master
+		NATURAL JOIN appearances
+        NATURAL JOIN teams
+);
+CREATE OR REPLACE VIEW otherTeamsB AS (
+	SELECT DISTINCT X.nameFirst, X.nameLast
+    FROM allPlayers X INNER JOIN allPlayers Y ON X.masterID = Y.masterID
+	WHERE X.name = "Brooklyn Dodgers" AND Y.name <> "Brooklyn Dodgers"
+);
+CREATE OR REPLACE VIEW BDodgers AS (
+	SELECT DISTINCT nameFirst, nameLast 
+    FROM master
+		NATURAL JOIN appearances
+		NATURAL JOIN teams
+	WHERE teams.name = "Brooklyn Dodgers"
+);
+CREATE OR REPLACE VIEW onlyBDodgers AS (
+	SELECT DISTINCT nameFirst, nameLast
+    FROM BDodgers 
+    WHERE NOT EXISTS (SELECT nameFirst, nameLast 
+					  FROM otherTeamsB
+                      WHERE BDodgers.nameFirst = otherTeamsB.nameFirst
+						AND BDodgers.nameLast = otherTeamsB.nameLast)
+);
+CREATE OR REPLACE VIEW otherTeamsLA AS (
+	SELECT DISTINCT X.nameFirst, X.nameLast
+    FROM allPlayers X INNER JOIN allPlayers Y ON X.masterID = Y.masterID
+	WHERE X.name = "Los Angeles Dodgers" AND Y.name <> "Los Angeles Dodgers"
+);
+CREATE OR REPLACE VIEW LADodgers AS (
+	SELECT DISTINCT nameFirst, nameLast 
+    FROM master
+		NATURAL JOIN appearances
+		NATURAL JOIN teams
+	WHERE teams.name = "Los Angeles Dodgers"
+);
+CREATE OR REPLACE VIEW onlyLADodgers AS (
+	SELECT DISTINCT nameFirst, nameLast
+    FROM LADodgers 
+    WHERE NOT EXISTS (SELECT nameFirst, nameLast 
+					  FROM otherTeamsLA
+                      WHERE LADodgers.nameFirst = otherTeamsLA.nameFirst
+						AND LADodgers.nameLast = otherTeamsLA.nameLast)
+);
+SELECT nameFirst, nameLast
+FROM ((SELECT nameFirst, nameLast FROM onlyBDodgers) 
+	UNION (SELECT nameFirst, nameLast FROM onlyLADodgers)) unionList
+ORDER BY nameLast;
 
 -- Query 3 - Gold Glove Dodgers
 -- For each Los Angeles Dodger that has won a "Gold Glove" award, 
@@ -77,16 +111,14 @@ ORDER BY yearID;
 -- List the total salary for two consecutive years, team name, and year 
 -- for every team that had a total salary which was 1.5 times as much 
 -- as for the previous year.
--- VERIFY RESULTS
--- 1.094 sec
+-- .289 sec
 CREATE OR REPLACE VIEW teamsalaries AS (
-	SELECT name, lgID, yearID, SUM(salaries.salary) salary FROM master 
+	SELECT name, yearID, SUM(salaries.salary) salary FROM master 
 		NATURAL JOIN salaries
 		NATURAL JOIN teams
-		NATURAL JOIN appearances
 	GROUP BY teams.name, teams.yearID
 );
-SELECT X.name, X.lgID, X.yearID prevYear, X.salary prevSalary, 
+SELECT X.name, X.yearID prevYear, X.salary prevSalary, 
 	Y.yearID currYear, Y.salary currSalary, TRUNCATE(Y.salary / X.salary * 100, 0) percentIncrease
 FROM teamsalaries X, teamsalaries Y
 WHERE X.name = Y.name
@@ -173,21 +205,20 @@ WHERE X.nameFirst <> Y.nameFirst AND X.nameLast <> Y.nameLast
 ORDER BY X.yearId;
 
 -- Query 11 - Ranking the teams
--- Rank each National League (NL) team in terms of the winning percentage (wins divided by losses) 
+-- Rank each team in terms of the winning percentage (wins divided by losses) 
 -- over its entire history. Consider a "team" to be a team with the same name, 
 -- so if the team changes name, it is consider two different teams. 
 -- Show the team name, win percentage, and the rank.
 -- .032 sec
-CREATE OR REPLACE VIEW nleague AS (
+CREATE OR REPLACE VIEW stats AS (
 	SELECT teams.name, SUM(teams.W) wins, SUM(teams.L) losses, SUM(teams.W)/(SUM(teams.W) + SUM(teams.L)) winRate
 	FROM teams
-	WHERE lgID = "NL"
 	GROUP BY name
 );
 SELECT X.name, X.wins, X.losses, X.winRate, COUNT(*) AS rank
-FROM nleague X, nleague Y
+FROM stats X, stats Y
 WHERE X.winRate <= Y.winRate
-GROUP BY X.name
+GROUP BY X.name, X.wins, X.losses, X.winRate
 ORDER BY rank;
 
 -- Query 12 - Casey Stengel's Pitchers
@@ -224,11 +255,6 @@ CREATE OR REPLACE VIEW yogiTeams AS (
     FROM master 
 		NATURAL JOIN appearances
 	WHERE nameFirst = "Yogi" AND nameLast = "Berra"
-);
-CREATE OR REPLACE VIEW allPlayers AS (
-	SELECT masterId, nameFirst, nameLast, teamID, yearId
-	FROM master
-		NATURAL JOIN appearances
 );
 CREATE OR REPLACE VIEW yogiTeamMembers AS (
 	SELECT allPlayers.masterId
