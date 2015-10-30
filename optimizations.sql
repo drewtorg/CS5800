@@ -43,7 +43,15 @@ WHERE
         AND schools.schoolId = schoolsplayers.schoolID
 ORDER BY year;
 
+
+
 -- QUERY 3 --
+
+CREATE INDEX appearanceYearIndex ON appearances(yearId);
+CREATE INDEX appearanceLeagueIndex ON appearances(lgId);
+
+DROP INDEX appearanceYearIndex ON appearances;
+DROP INDEX appearanceLeagueIndex ON appearances;
 
 EXPLAIN SELECT DISTINCT
     jeter.masterID,
