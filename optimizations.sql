@@ -8,9 +8,13 @@ DROP INDEX teamsNameIndex on teams;
 DROP INDEX teamsYearIndex on teams;
 DROP INDEX masterNameIndex on master;
 
+-- QUERY 1 --
+
+CREATE INDEX pitchingWinsIndex ON pitching(w);
+DROP INDEX pitchingWinsIndex on pitching;
 
 EXPLAIN SELECT 
-    DISTINCT m.nameFirst, m.nameLast
+	DISTINCT m.nameFirst, m.nameLast
 FROM
     master m,
     pitching a,
@@ -22,57 +26,72 @@ WHERE
         AND t.name like '%Montreal Expos%'
         AND t.yearID = a.yearId
         AND a.w > 20;
+
+
+
         
+-- QUERY 2 --
+
 SELECT 
-    h / ab as Average, h as 'Hits', ab as 'At Bats', nameFirst as 'First Name', nameLast as 'Last Name', batting.yearID as Year
+    h / ab AS Average,
+    h AS 'Hits',
+    ab AS 'At Bats',
+    nameFirst AS 'First Name',
+    nameLast AS 'Last Name',
+    batting.yearID AS Year
 FROM
     batting,
     master
 WHERE
-    ab is not null
-        and batting.masterID = master.masterID
+    ab IS NOT NULL
+        AND batting.masterID = master.masterID
         AND master.masterID IN (SELECT 
             masterID
         FROM
             schoolsplayers
         WHERE
-            schoolID in (SELECT 
+            schoolID IN (SELECT 
                     schoolID
                 FROM
                     schools
                 WHERE
-                    schoolName like '%Utah State%'))
-order by year;
+                    schoolName LIKE '%Utah State%'))
+ORDER BY year;
 
-SELECT distinct jeter.masterID, jeterT.masterID, jeterTY.masterID, jeterTT.masterID
+
+
+-- QUERY 3 --
+
+SELECT DISTINCT
+    jeter.masterID,
+    jeterT.masterID,
+    jeterTY.masterID,
+    jeterTT.masterID
 FROM
     master m,
     appearances jeter,
     appearances jeterT,
-	appearances jeterTY,
+    appearances jeterTY,
     appearances jeterTT
 WHERE
-         m.masterID = jeter.masterID
+    m.masterID = jeter.masterID
         AND m.nameLast = 'Jeter'
         AND m.nameFirst = 'Derek'
-        AND     jeter.teamID = jeterT.teamID
-        AND  jeter.yearID = jeterT.yearID
-        AND  jeter.lgID = jeterT.lgID
-        AND  jeter.masterID <> jeterT.masterID
-
-		AND  jeterT.masterID = jeterTY.masterID
-
-
-        AND  jeterTY.teamID = jeterTT.teamID
-        and  jeterTY.yearID = jeterTT.yearID
-        AND  jeterTY.lgID = jeterTT.lgID
-        AND  jeterTY.masterID <> jeterTT.masterID
-
-
-        AND  jeterTT.masterID <> jeter.masterID
+        AND jeter.teamID = jeterT.teamID
+        AND jeter.yearID = jeterT.yearID
+        AND jeter.lgID = jeterT.lgID
+        AND jeter.masterID <> jeterT.masterID
+        AND jeterT.masterID = jeterTY.masterID
+        AND jeterTY.teamID = jeterTT.teamID
+        AND jeterTY.yearID = jeterTT.yearID
+        AND jeterTY.lgID = jeterTT.lgID
+        AND jeterTY.masterID <> jeterTT.masterID
+        AND jeterTT.masterID <> jeter.masterID
+        AND jeter.teamID <> jeterTY.teamID;
 
 
-		AND  jeter.teamID <> jeterTY.teamID;
+
+-- QUERY 4 --
 
 SELECT 
     name, yearId, W
@@ -84,39 +103,43 @@ WHERE
         FROM
             teams y
         WHERE
-            t.yearID = y.yearID
-                );
-                
-SELECT
-    C.yearID as year,
-    name as teamName,
-    C.lgID as league,
-    D.cnt as totalBatters,
-    C.cnt as aboveAverageBatters
+            t.yearID = y.yearID);
+  
+
+
+-- QUERY 5 --
+
+SELECT 
+    C.yearID AS year,
+    name AS teamName,
+    C.lgID AS league,
+    D.cnt AS totalBatters,
+    C.cnt AS aboveAverageBatters
 FROM
     (SELECT 
-        count(masterID) as cnt, A.yearID, A.teamID, A.lgID
+        COUNT(masterID) AS cnt, A.yearID, A.teamID, A.lgID
     FROM
-        (select 
+        (SELECT 
         masterID,
             teamID,
             yearID,
             lgID,
-            sum(AB),
-            sum(H),
-            sum(H) / sum(AB) as avg
+            SUM(AB),
+            SUM(H),
+            SUM(H) / SUM(AB) AS avg
     FROM
         batting
-    GROUP BY teamID , yearID , lgID , masterID) B, (select 
+    GROUP BY teamID , yearID , lgID , masterID) B, (SELECT 
         teamID,
             yearID,
             lgID,
-            sum(AB),
-            sum(H),
-            sum(H) / sum(AB) as avg
+            SUM(AB),
+            SUM(H),
+            SUM(H) / SUM(AB) AS avg
     FROM
         batting
-    WHERE ab is not null
+    WHERE
+        ab IS NOT NULL
     GROUP BY teamID , yearID , lgID) A
     WHERE
         A.avg >= B.avg AND A.teamID = B.teamID
@@ -124,11 +147,12 @@ FROM
             AND A.lgID = B.lgID
     GROUP BY teamID , yearID , lgID) C,
     (SELECT 
-        count(masterID) as cnt, yearID, teamID, lgID
+        COUNT(masterID) AS cnt, yearID, teamID, lgID
     FROM
         batting
-    WHERE ab is not null
-    GROUP BY yearID , teamID , lgID) D, 
+    WHERE
+        ab IS NOT NULL
+    GROUP BY yearID , teamID , lgID) D,
     teams
 WHERE
     C.cnt / D.cnt >= 0.75
@@ -138,75 +162,83 @@ WHERE
         AND teams.yearID = C.yearID
         AND teams.lgID = C.lgID
         AND teams.teamID = C.teamID;
-        
-SELECT distinct
-    master.nameFirst as 'First Name', master.nameLast as 'Last Name'
+       
+
+
+-- QUERY 6 --
+
+SELECT DISTINCT
+    master.nameFirst AS 'First Name',
+    master.nameLast AS 'Last Name'
 FROM
     (SELECT 
-        b.masterID as ID, b.yearID as year
+        b.masterID AS ID, b.yearID AS year
     FROM
         batting b, teams t
     WHERE
-        name like '%New York Yankees%'
-            and b.teamID = t.teamID
-            and b.yearID = t.yearID
-            and t.lgID = b.lgID) y1,
+        name LIKE '%New York Yankees%'
+            AND b.teamID = t.teamID
+            AND b.yearID = t.yearID
+            AND t.lgID = b.lgID) y1,
     (SELECT 
-        b.masterID as ID, b.yearID as year
+        b.masterID AS ID, b.yearID AS year
     FROM
         batting b, teams t
     WHERE
-        name like '%New York Yankees%'
-            and b.teamID = t.teamID
-            and b.yearID = t.yearID
-            and t.lgID = b.lgID) y2,
+        name LIKE '%New York Yankees%'
+            AND b.teamID = t.teamID
+            AND b.yearID = t.yearID
+            AND t.lgID = b.lgID) y2,
     (SELECT 
-        b.masterID as ID, b.yearID as year
+        b.masterID AS ID, b.yearID AS year
     FROM
         batting b, teams t
     WHERE
-        name like '%New York Yankees%'
-            and b.teamID = t.teamID
-            and b.yearID = t.yearID
-            and t.lgID = b.lgID) y3,
+        name LIKE '%New York Yankees%'
+            AND b.teamID = t.teamID
+            AND b.yearID = t.yearID
+            AND t.lgID = b.lgID) y3,
     (SELECT 
-        b.masterID as ID, b.yearID as year
+        b.masterID AS ID, b.yearID AS year
     FROM
         batting b, teams t
     WHERE
-        name like '%New York Yankees%'
-            and b.teamID = t.teamID
-            and b.yearID = t.yearID
-            and t.lgID = b.lgID) y4,
+        name LIKE '%New York Yankees%'
+            AND b.teamID = t.teamID
+            AND b.yearID = t.yearID
+            AND t.lgID = b.lgID) y4,
     master
 WHERE
-    y1.id = y2.id and y2.id = y3.id
-        and y3.id = y4.id
-        and y1.year + 1 = y2.year
-        and y2.year + 1 = y3.year
-        and y3.year + 1 = y4.year
-        and y4.id = master.masterID
-ORDER BY master.nameLast, master.nameFirst;
+    y1.id = y2.id AND y2.id = y3.id
+        AND y3.id = y4.id
+        AND y1.year + 1 = y2.year
+        AND y2.year + 1 = y3.year
+        AND y3.year + 1 = y4.year
+        AND y4.id = master.masterID
+ORDER BY master.nameLast , master.nameFirst;
 
+
+
+-- QUERY 7 --
 
 SELECT 
     name,
     A.lgID,
-    A.S as TotalSalary,
-    A.yearID as Year,
-    B.S as PreviousYearSalary,
-    B.yearID as PreviousYear
+    A.S AS TotalSalary,
+    A.yearID AS Year,
+    B.S AS PreviousYearSalary,
+    B.yearID AS PreviousYear
 FROM
     (SELECT 
-        sum(salary) as S, yearID, teamID, lgID
+        SUM(salary) AS S, yearID, teamID, lgID
     FROM
         salaries
-    group by yearID , teamID , lgID) A,
+    GROUP BY yearID , teamID , lgID) A,
     (SELECT 
-        sum(salary) as S, yearID, teamID, lgID
+        SUM(salary) AS S, yearID, teamID, lgID
     FROM
         salaries
-    group by yearID , teamID , lgID) B,
+    GROUP BY yearID , teamID , lgID) B,
     teams
 WHERE
     A.yearID = B.yearID + 1
