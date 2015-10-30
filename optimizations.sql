@@ -1,13 +1,4 @@
 use baseball;
-
-CREATE INDEX masterNameIndex ON master(nameFirst, nameLast);
-CREATE INDEX teamsNameIndex ON teams(name);
-CREATE INDEX teamsYearIndex ON teams(yearID);
-
-DROP INDEX teamsNameIndex on teams;
-DROP INDEX teamsYearIndex on teams;
-DROP INDEX masterNameIndex on master;
-
 -- QUERY 1 --
 
 CREATE INDEX pitchingWinsIndex ON pitching(w);
@@ -32,43 +23,6 @@ WHERE
         
 -- QUERY 2 --
 
-CREATE INDEX abIndex ON batting(ab);
-CREATE INDEX schoolNameIndex ON schools(schoolName);
-CREATE INDEX schoolMasterIndex ON schoolsplayers(masterID);
-CREATE INDEX battingYearIndex ON batting(yearID);
-
-
-DROP INDEX abIndex ON batting;
-DROP INDEX schoolNameIndex ON schools;
-DROP INDEX battingYearIndex ON batting;
-DROP INDEX schoolMasterIndex ON schoolsplayers;
-
-EXPLAIN SELECT 
-    h / ab AS Average,
-    h AS 'Hits',
-    ab AS 'At Bats',
-    nameFirst AS 'First Name',
-    nameLast AS 'Last Name',
-    batting.yearID AS Year
-FROM
-    batting,
-    master
-WHERE
-    ab IS NOT NULL
-        AND batting.masterID = master.masterID
-        AND master.masterID IN (SELECT 
-            masterID
-        FROM
-            schoolsplayers
-        WHERE
-            schoolID IN (SELECT 
-                    schoolID
-                FROM
-                    schools
-                WHERE
-                    schoolName LIKE '%Utah State%'))
-ORDER BY year;
-
 EXPLAIN SELECT 
     h / ab AS Average,
     h AS 'Hits',
@@ -85,13 +39,13 @@ WHERE
     ab IS NOT NULL
         AND batting.masterID = master.masterID
         AND batting.masterID = schoolsplayers.masterID
-        AND schools.schoolName = 'Utah State University'
+        AND schools.schoolName LIKE '%Utah State%'
         AND schools.schoolId = schoolsplayers.schoolID
 ORDER BY year;
 
 -- QUERY 3 --
 
-SELECT DISTINCT
+EXPLAIN SELECT DISTINCT
     jeter.masterID,
     jeterT.masterID,
     jeterTY.masterID,
