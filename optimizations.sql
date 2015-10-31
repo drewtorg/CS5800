@@ -47,10 +47,7 @@ ORDER BY year;
 
 -- QUERY 3 --
 
-CREATE INDEX appearanceYearIndex ON appearances(yearId);
 CREATE INDEX appearanceLeagueIndex ON appearances(lgId);
-
-DROP INDEX appearanceYearIndex ON appearances;
 DROP INDEX appearanceLeagueIndex ON appearances;
 
 EXPLAIN SELECT DISTINCT
@@ -84,18 +81,19 @@ WHERE
 
 -- QUERY 4 --
 
-SELECT 
-    name, yearId, W
+CREATE INDEX teamYearWinsIndex ON teams(yearID, W);
+DROP INDEX teamYearWinsIndex on teams;
+        
+EXPLAIN SELECT
+    T.name, T.yearId, T.W
 FROM
-    teams T
-WHERE
-    W = (SELECT 
-            MAX(W)
+    teams T INNER JOIN 
+    (SELECT 
+            z.yearID, MAX(W) as W
         FROM
-            teams y
-        WHERE
-            t.yearID = y.yearID);
-  
+            teams z
+        GROUP BY z.yearID) y ON T.yearID = y.yearID AND T.W = y.W;
+	
 
 
 -- QUERY 5 --
