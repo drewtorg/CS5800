@@ -98,7 +98,13 @@ FROM
 
 -- QUERY 5 --
 
-SELECT 
+CREATE INDEX battingMultiIndex ON batting(teamID, yearID, lgID);
+CREATE INDEX battingABIndex ON batting(ab);
+
+DROP INDEX battingMultiIndex on batting;
+DROP INDEX battingABIndex on batting;
+
+EXPLAIN SELECT 
     C.yearID AS year,
     name AS teamName,
     C.lgID AS league,
