@@ -219,7 +219,7 @@ ORDER BY master.nameLast , master.nameFirst;
 
 -- QUERY 7 --
 
-SELECT 
+EXPLAIN SELECT 
     name,
     A.lgID,
     A.S AS TotalSalary,
@@ -246,3 +246,35 @@ WHERE
         AND teams.yearID = A.yearID
         AND teams.lgID = A.lgID
         AND teams.teamID = A.teamID;
+        
+EXPLAIN SELECT 
+    name,
+    A.lgID,
+    A.S AS TotalSalary,
+    A.yearID AS Year,
+    B.yearID AS PreviousYear,
+    B.S AS PreviousSalary
+FROM
+    (SELECT 
+        SUM(salary) AS S, s.yearID, s.teamID, s.lgID
+    FROM
+        salaries s
+    GROUP BY s.yearID , s.teamID , s.lgID
+    HAVING S*2 <= (	SELECT SUM(salary)
+						FROM salaries z
+                        WHERE s.yearID = z.yearID + 1 AND s.teamID = z.teamID AND s.lgID = z.lgID
+                        GROUP BY z.yearID, z.teamID, z.lgID )
+	) A,
+    (SELECT 
+        SUM(salary) AS S, yearID, teamID, lgID
+    FROM
+        salaries
+    GROUP BY yearID , teamID , lgID) B,
+    teams
+WHERE
+     teams.yearID = A.yearID
+        AND teams.lgID = A.lgID
+        AND teams.teamID = A.teamID
+        AND B.yearID = A.yearID - 1
+        AND B.teamID = A.teamID
+        AND B.lgID = A.lgID;
