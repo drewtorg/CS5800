@@ -162,7 +162,10 @@ WHERE
 
 -- QUERY 6 --
 
-SELECT DISTINCT
+CREATE INDEX battingMultiIndex ON batting(teamID, yearID, lgID);
+DROP INDEX battingMultiIndex on batting;
+
+EXPLAIN SELECT DISTINCT
     master.nameFirst AS 'First Name',
     master.nameLast AS 'Last Name'
 FROM
