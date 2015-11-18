@@ -1,0 +1,41 @@
+{
+   "_id": "_design/queries",
+   "_rev": "34-d62c77e548444b5289fdcde1094d06fd",
+   "language": "javascript",
+   "views": {
+
+	----View 1: Count the randomArrayItems.
+       "countRandomArrayItems": {
+           "map": "function(doc) {\n  var data = doc.data;\n  for(var i in data){\n    emit(data[i].randomArrayItem, 1);\n  }\n}",
+           "reduce": "function(key, values, rereduce){\n  return values.length\n}"
+       },
+
+	----View 2: Names of people with max age by gender and isActive 
+       "maxAge": {
+           "map": "function(doc) {\n  var data = doc.data;\n  for(var i in data){\n    var person = data[i];\n    var key = [ person.gender, person.isActive ];\n    var value = { age: person.age, name: person.name };\n    emit(key, value);\n  }\n}",
+           "reduce": "function(key, values, rereduce){\n  var obj = {age: 0, names:[]};\n  var ages = [];\n  for (var i in values){\n    ages.push(values[i].age)\n  }\n  obj.age = Math.max.apply(null, ages);\n  for (var i in values){\n    if(obj.age == values[i].age)\n      obj.names.push(values[i].name);\n  }\n  return obj;\n}"
+       },
+
+	----View 3: A count of the people by tags, that is, count all the people with the given value in the tags array.
+       "tagCount": {
+           "map": "function(doc) {\n  var data = doc.data;\n  for (var i in data){\n    var person = data[i];\n    for (var j in person.tags){\n      emit(person.tags[j], 1);\n    }\n  }\n}",
+           "reduce": "function(key, values, rereduce){\n  return values.length\n}"
+       },
+
+	----View 4: The average age of people by company.
+       "averageAge": {
+           "map": "function(doc) {\n  var data = doc.data;\n  for(var i in data){\n    var person = data[i];\n    emit(person.company, person.age);\n  }\n}",
+           "reduce": "function(key, values, rereduce){\n  var sum = 0;\n  for (var i in values) {\n    sum += values[i];\n  }\n  return (sum/values.length).toFixed(1);\n}"
+       },
+
+	----View 5: The JSON of the lattitude, longitude, and address of each employee that has a lattitude of more than 80.
+       "latitudes": {
+           "map": "function(doc) {\n  var data = doc.data;\n  for (var i in data){\n    var person = data[i];\n    var location = { \n      latitude: person.latitude,\n      longitude: person.longitude,\n      address: person.address\n    }\n    if(person.latitude > 80)\n      emit(person.id, location);\n  }\n\n}"
+       },
+
+	----View 6: Names of people and their frineds that start with the letter "J" if they have at least one friend whose name starts with the letter "J".
+       "JFriends": {
+           "map": "function(doc) {\n  var data = doc.data;\n  for(var i in data){\n    var person = data[i];\n    var JFriends = [];\n    for (var j in person.friends){\n      var friend = person.friends[j];\n      if(friend.name.charAt(0) == 'J')\n        emit(person.name, friend.name);\n    }\n  }\n}"
+       }
+   }
+}
